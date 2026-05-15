@@ -109,10 +109,36 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
         return s.length > n ? s.slice(0, n) + "..." : s;
     }
 
+    function naturalCompare(a, b){
+        const left = (a || "").toString().toUpperCase().match(/\d+|\D+/g) || [""];
+        const right = (b || "").toString().toUpperCase().match(/\d+|\D+/g) || [""];
+        const len = Math.max(left.length, right.length);
+        for (let i = 0; i < len; i++){
+            const x = left[i] || "";
+            const y = right[i] || "";
+            const xNum = /^\d+$/.test(x) ? Number(x) : null;
+            const yNum = /^\d+$/.test(y) ? Number(y) : null;
+            if (xNum !== null && yNum !== null && xNum !== yNum) return xNum - yNum;
+            if (x !== y) return x.localeCompare(y, "zh-CN");
+        }
+        return 0;
+    }
+
+    function compareGraphNode(a, b){
+        if (a.type === "DOCUMENT" || b.type === "DOCUMENT"){
+            return Number(a.document_id || 0) - Number(b.document_id || 0)
+                || naturalCompare(a.req_code || a.title || a.id, b.req_code || b.title || b.id);
+        }
+        return naturalCompare(a.req_code || a.label || a.id, b.req_code || b.label || b.id)
+            || Number(a.version_no || 0) - Number(b.version_no || 0)
+            || naturalCompare(a.title || "", b.title || "")
+            || naturalCompare(a.id || "", b.id || "");
+    }
+
     function renderColumns(data){
         const canvas = document.getElementById("graph_canvas");
         canvas.querySelectorAll(".version-column").forEach(x => x.remove());
-        const columns = data.columns || [];
+        const columns = (data.columns || []).slice().sort((a, b) => Number(a.version_no) - Number(b.version_no));
         const nodes = data.nodes || [];
         if (!nodes.length){
             document.getElementById("graph_status").innerText = "暂无需求版本数据，请先在需求管理页上传需求文档。";
@@ -120,7 +146,9 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
         }
         document.getElementById("graph_status").innerText = data.summary || "图谱加载完成";
         columns.forEach(col => {
-            const colNodes = nodes.filter(n => Number(n.column) === Number(col.version_no));
+            const colNodes = nodes
+                .filter(n => Number(n.column) === Number(col.version_no))
+                .sort(compareGraphNode);
             const div = document.createElement("div");
             div.className = "version-column";
             div.dataset.version = col.version_no;
