@@ -1,12 +1,12 @@
-<!--影响波及图页面-->
+<!--需求变更追溯关系图页面-->
 <!--
-GET /api/v1/graph/document-impact：                                     加载默认影响波及图
-GET /api/v1/graph/document-impact?document_id={id}：                    按文档 ID 加载完整影响波及图
+GET /api/v1/graph/document-impact：                                     加载默认需求变更追溯关系图
+GET /api/v1/graph/document-impact?document_id={id}：                    按文档 ID 加载完整需求变更追溯关系图
 GET /api/v1/graph/document-impact?req_code={req_code}：                 按需求编号加载单链版本图
 GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文档 ID 和需求编号组合加载图谱
 -->
 {% extends "base.html" %}
-{% block title %}影响波及图{% endblock %}
+{% block title %}需求变更追溯关系图{% endblock %}
 
 {% block head %}
 <style>
@@ -34,7 +34,7 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
 
 {% block content %}
 <div class="page-banner">
-    <h1 class="page-banner-title">影响波及图</h1>
+    <h1 class="page-banner-title">需求变更追溯关系图</h1>
 </div>
 
 <div class="row g-3 mb-3">
