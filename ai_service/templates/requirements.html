@@ -264,7 +264,7 @@
                 setUploadMsg("danger", "上传失败：" + (data.detail || JSON.stringify(data)));
                 return;
             }
-            setUploadMsg("success", `文档解析完成：提取 ${data.imported_count || 0} 条需求点，关系 ${data.relations_count || 0} 条`);
+            setUploadMsg("success", `文档解析完成：提取 ${data.imported_count || 0} 条需求点`);
             fileInput.value = "";
             await loadDocs(data.document_id);
         } finally {

@@ -3,7 +3,7 @@
 GET /api/v1/graph/document-impact：                                     加载默认需求变更追溯关系图
 GET /api/v1/graph/document-impact?document_id={id}：                    按文档 ID 加载完整需求变更追溯关系图
 GET /api/v1/graph/document-impact?req_code={req_code}：                 按需求编号加载单链版本图
-GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文档 ID 和需求编号组合加载图谱
+GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文档 ID 和需求编号组合加载关系图
 -->
 {% extends "base.html" %}
 {% block title %}需求变更追溯关系图{% endblock %}
@@ -41,7 +41,7 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
     <div class="col-12">
         <div class="metric-strip">
             <div class="metric-chip">
-                <div class="label">图谱模式</div>
+                <div class="label">关系图模式</div>
                 <div class="value fs-6">文档需求版本链</div>
                 <div class="hint">文档列 + 初始列 + 变更列</div>
             </div>
@@ -62,13 +62,13 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
 <div class="card panel-card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
         <div>
-            <div class="panel-title">需求变更波及关系</div>
-            <div class="panel-sub">最前面是上传文档节点；文档节点连接提取出的需求点；每次修改后，右侧追加该需求的新版本节点；输入文档ID时展示完整图谱，输入需求编号时展示该需求单链。</div>
+            <div class="panel-title">需求变更追溯关系</div>
+            <div class="panel-sub">最前面是上传文档节点；文档节点连接提取出的需求点；每次修改后，右侧追加该需求的新版本节点；输入文档ID时展示完整关系图，输入需求编号时展示该需求单链。</div>
         </div>
         <div class="compact-toolbar">
             <input id="filter_doc" class="form-control form-control-sm" style="width:120px;" placeholder="文档ID">
             <input id="filter_req" class="form-control form-control-sm" style="width:150px;" placeholder="需求编号 R1" value="{{ req_code or '' }}">
-            <button class="btn btn-outline-primary btn-sm" onclick="loadGraph()"><i class="bi bi-arrow-clockwise"></i> 刷新图谱</button>
+            <button class="btn btn-outline-primary btn-sm" onclick="loadGraph()"><i class="bi bi-arrow-clockwise"></i> 刷新关系图</button>
             <a class="btn btn-outline-secondary btn-sm" href="/ui/requirements"><i class="bi bi-upload"></i> 上传文档</a>
         </div>
     </div>
@@ -109,46 +109,18 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
         return s.length > n ? s.slice(0, n) + "..." : s;
     }
 
-    function naturalCompare(a, b){
-        const left = (a || "").toString().toUpperCase().match(/\d+|\D+/g) || [""];
-        const right = (b || "").toString().toUpperCase().match(/\d+|\D+/g) || [""];
-        const len = Math.max(left.length, right.length);
-        for (let i = 0; i < len; i++){
-            const x = left[i] || "";
-            const y = right[i] || "";
-            const xNum = /^\d+$/.test(x) ? Number(x) : null;
-            const yNum = /^\d+$/.test(y) ? Number(y) : null;
-            if (xNum !== null && yNum !== null && xNum !== yNum) return xNum - yNum;
-            if (x !== y) return x.localeCompare(y, "zh-CN");
-        }
-        return 0;
-    }
-
-    function compareGraphNode(a, b){
-        if (a.type === "DOCUMENT" || b.type === "DOCUMENT"){
-            return Number(a.document_id || 0) - Number(b.document_id || 0)
-                || naturalCompare(a.req_code || a.title || a.id, b.req_code || b.title || b.id);
-        }
-        return naturalCompare(a.req_code || a.label || a.id, b.req_code || b.label || b.id)
-            || Number(a.version_no || 0) - Number(b.version_no || 0)
-            || naturalCompare(a.title || "", b.title || "")
-            || naturalCompare(a.id || "", b.id || "");
-    }
-
     function renderColumns(data){
         const canvas = document.getElementById("graph_canvas");
         canvas.querySelectorAll(".version-column").forEach(x => x.remove());
-        const columns = (data.columns || []).slice().sort((a, b) => Number(a.version_no) - Number(b.version_no));
+        const columns = data.columns || [];
         const nodes = data.nodes || [];
         if (!nodes.length){
             document.getElementById("graph_status").innerText = "暂无需求版本数据，请先在需求管理页上传需求文档。";
             return;
         }
-        document.getElementById("graph_status").innerText = data.summary || "图谱加载完成";
+        document.getElementById("graph_status").innerText = data.summary || "关系图加载完成";
         columns.forEach(col => {
-            const colNodes = nodes
-                .filter(n => Number(n.column) === Number(col.version_no))
-                .sort(compareGraphNode);
+            const colNodes = nodes.filter(n => Number(n.column) === Number(col.version_no));
             const div = document.createElement("div");
             div.className = "version-column";
             div.dataset.version = col.version_no;
@@ -237,12 +209,12 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
         if (req) params.set("req_code", req);
         if (doc) params.set("document_id", doc);
         const url = `${API}/graph/document-impact${params.toString() ? "?" + params.toString() : ""}`;
-        document.getElementById("graph_status").innerText = "正在加载图谱...";
+        document.getElementById("graph_status").innerText = "正在加载关系图...";
         try{
             const res = await fetch(url);
             const data = await res.json().catch(() => ({}));
             if (!res.ok){
-                document.getElementById("graph_status").innerText = "图谱加载失败：" + (data.detail || JSON.stringify(data));
+                document.getElementById("graph_status").innerText = "关系图加载失败：" + (data.detail || JSON.stringify(data));
                 return;
             }
             document.getElementById("node_count").innerText = (data.nodes || []).length;
@@ -250,7 +222,7 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
             renderColumns(data);
             setTimeout(() => { drawLines(data); }, 60);
         }catch(e){
-            document.getElementById("graph_status").innerText = "图谱加载失败：" + e.message;
+            document.getElementById("graph_status").innerText = "关系图加载失败：" + e.message;
         }
     }
 
@@ -263,7 +235,7 @@ GET /api/v1/graph/document-impact?req_code={req_code}&document_id={id}：按文�
     try{
         loadGraph();
     }catch(e){
-        document.getElementById("graph_status").innerText = "图谱初始化失败：" + e.message;
+        document.getElementById("graph_status").innerText = "关系图初始化失败：" + e.message;
     }
 </script>
 {% endblock %}

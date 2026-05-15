@@ -135,7 +135,7 @@ def client(db_session, monkeypatch, tmp_path):
 
 def test_app_and_basic_pages_ok(client):
     """检查应用初始化和主要页面路由。"""
-    assert app.title == "需求变更影响分析平台"
+    assert app.title == "软件需求变更管理与可追溯平台"
 
     for url in [
         "/",
